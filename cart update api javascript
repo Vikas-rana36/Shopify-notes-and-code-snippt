@@ -1,0 +1,78 @@
+1. Change this line in cart-template.liquid (should be around line #121):
+
+<input class="cart__qty-input" type="number" id="updates_{{ item.key }}" value="{{ item.quantity }}" min="0" pattern="[0-9]*" data-quantity-item="{{ forloop.index }}">
+ 
+
+to this:
+
+<input class="cart__qty-input" type="number" id="updates_{{ item.key }}" value="{{ item.quantity }}" min="0" pattern="[0-9]*" data-quantity-item="{{ forloop.index }}" data-qty="{{item.variant.inventory_quantity}}">
+ 
+
+2. Similarly, change the following line (approx line #98) from:
+
+<input class="cart__qty-input" type="number" name="updates[]" id="updates_large_{{ item.key }}" value="{{ item.quantity }}" min="0" pattern="[0-9]*" data-quantity-item="{{ forloop.index }}">
+ 
+
+to this:
+
+<input class="cart__qty-input" type="number" name="updates[]" id="updates_large_{{ item.key }}" value="{{ item.quantity }}" min="0" pattern="[0-9]*" data-quantity-item="{{ forloop.index }}" data-qty="{{item.variant.inventory_quantity}}">
+ 
+
+Note: only difference for both changes is adding this in:
+
+data-qty="{{item.variant.inventory_quantity}}"
+The reason for making the above updates is to ensure we can check the inventory level of the product while the page is loaded, which previously you could not do.
+
+ 
+
+3. At the very bottom of that file (cart-template.liquid), please add the following:
+
+<script type="text/javascript">
+  document.querySelectorAll('.cart__qty-input').forEach(function(el) {
+    el.addEventListener('change', function (e) {
+      var inventory = e.srcElement.dataset.qty;
+      var reqQty = e.srcElement.value;
+      var label = e.srcElement.closest('tr.cart__row').querySelector('p.inventory-status');
+
+      if (inventory < reqQty && inventory > 0) {
+        label.innerText = `${inventory} in stock - 2-4 weeks build time on additional quantities.`;
+      } else if (inventory < 1) {
+        label.innerText = "Out of stock - 2-4 week build time."
+      } else {
+        label.innerText = "";
+      }
+    });
+  });
+</script>
+This Javascript code will wait for the quantity input to change and when it does it will update the message appropriately.
+
+ 
+
+4. One last change that we will need to make is to the code you have added from your very first post.
+
+
+Taking this select part of your code:
+
+{% if item.variant.inventory_quantity >= item.quantity %} 
+  {%- comment -%}In stock{%- endcomment -%}
+{% elsif item.variant.inventory_quantity <= item.quantity and item.variant.inventory_quantity <= 0 %}
+  <p> Out of stock - 2-4 week build time. <p>
+{% elsif item.variant.inventory_quantity <= item.quantity and item.variant.inventory_quantity >= 0 %} 
+  <p> {{ item.variant.inventory_quantity }} in stock - 2-4 week build time on additional quantities.<p>
+{% endif %}
+ 
+
+Please change it to the following:
+
+{% if item.variant.inventory_quantity >= item.quantity %} 
+  {%- comment -%}In stock{%- endcomment -%}
+  <p class="inventory-status"></p>
+{% elsif item.variant.inventory_quantity <= item.quantity and item.variant.inventory_quantity <= 0 %}
+  <p class="inventory-status"> Out of stock - 2-4 week build time. <p>
+{% elsif item.variant.inventory_quantity <= item.quantity and item.variant.inventory_quantity >= 0 %} 
+  <p class="inventory-status"> {{ item.variant.inventory_quantity }} in stock - 2-4 week build time on additional quantities.<p>
+{% endif %}
+By making this change, we make sure the the area for the message to display in will always be present on the page.
+
+Check the url for more details: https://community.shopify.com/c/Shopify-Design/Help-with-cart-refresh-update-in-debut-theme/td-p/595826/page/2
+‎
